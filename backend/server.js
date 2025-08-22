@@ -65,6 +65,11 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Server is working!', route: '/test' });
 });
 
+// Favicon route
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end(); // No content
+});
+
 // Google OAuth URL generation
 app.post('/api/auth/google', async (req, res) => {
     try {
