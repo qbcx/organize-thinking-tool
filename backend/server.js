@@ -256,8 +256,13 @@ app.get('/api/me', (req, res) => {
     }
 });
 
-// Catch-all route for debugging
+// Catch-all route for debugging (but not for root path)
 app.get('*', (req, res) => {
+    // Don't catch the root path - let it fall through to static files
+    if (req.path === '/') {
+        return res.sendFile('index.html', { root: './frontend' });
+    }
+    
     console.log(`404 - Route not found: ${req.path}`);
     res.status(404).json({ 
         error: 'Route not found', 
