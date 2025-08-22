@@ -2,7 +2,7 @@
 
 A modern web application to help you organize your thoughts, track project progress, and boost productivity with OAuth authentication.
 
-<!-- OAuth Configuration Updated -->
+<!-- OAuth Configuration Updated - Dashboard Fix -->
 
 ## ✨ Features
 
