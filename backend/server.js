@@ -59,6 +59,11 @@ app.get('/dashboard', (req, res) => {
     res.sendFile('dashboard.html', { root: '../frontend' });
 });
 
+// Test route to verify server is working
+app.get('/test', (req, res) => {
+    res.json({ message: 'Server is working!', route: '/test' });
+});
+
 // Google OAuth URL generation
 app.post('/api/auth/google', async (req, res) => {
     try {
