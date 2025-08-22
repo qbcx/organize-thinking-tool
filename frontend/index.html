@@ -58,9 +58,9 @@
             <div class="modal-body">
                 <p id="success-message">You've successfully signed in. Ready to organize your thoughts and boost your productivity?</p>
             </div>
-            <div class="modal-footer">
-                <button class="modal-btn primary" onclick="closeSuccessModal()">Get Started</button>
-            </div>
+                            <div class="modal-footer">
+                    <button class="modal-btn primary" onclick="closeSuccessModal()">Go to Dashboard</button>
+                </div>
         </div>
     </div>
 
@@ -156,7 +156,8 @@
         // Close success modal
         function closeSuccessModal() {
             document.getElementById('success-modal').style.display = 'none';
-            // Here you can redirect to dashboard or show dashboard content
+            // Redirect to dashboard after successful login
+            window.location.href = '/dashboard';
         }
 
         // Close error modal
