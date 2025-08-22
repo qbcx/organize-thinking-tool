@@ -48,15 +48,16 @@ const googleClient = new OAuth2Client(
 );
 
 // Serve static files (frontend)
-app.use(express.static('../frontend'));
+app.use(express.static('./frontend'));
 
 // Routes
 app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: '../frontend' });
+    res.sendFile('index.html', { root: './frontend' });
 });
 
 app.get('/dashboard', (req, res) => {
-    res.sendFile('dashboard.html', { root: '../frontend' });
+    console.log('Dashboard route accessed');
+    res.sendFile('dashboard.html', { root: './frontend' });
 });
 
 // Test route to verify server is working
@@ -248,6 +249,16 @@ app.get('/api/me', (req, res) => {
             message: 'Not logged in'
         });
     }
+});
+
+// Catch-all route for debugging
+app.get('*', (req, res) => {
+    console.log(`404 - Route not found: ${req.path}`);
+    res.status(404).json({ 
+        error: 'Route not found', 
+        path: req.path,
+        message: 'This route is not handled by the server'
+    });
 });
 
 // Start server

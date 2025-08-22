@@ -20,7 +20,11 @@
       "dest": "backend/server.js"
     },
     {
-      "src": "/dashboard(.*)",
+      "src": "/dashboard",
+      "dest": "backend/server.js"
+    },
+    {
+      "src": "/test",
       "dest": "backend/server.js"
     },
     {
