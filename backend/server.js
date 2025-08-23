@@ -136,11 +136,18 @@ app.post('/api/auth/google', async (req, res) => {
 // GitHub OAuth URL generation
 app.post('/api/auth/github', async (req, res) => {
     try {
+        console.log('🔐 GitHub OAuth URL requested');
+        console.log('📊 GitHub Client ID:', process.env.GITHUB_CLIENT_ID ? 'Set' : 'Missing');
+        console.log('🌍 Base URL:', BASE_URL);
+        
         const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.GITHUB_REDIRECT_URI || `${BASE_URL}/auth/github/callback`)}&scope=user:email`;
+        
+        console.log('✅ GitHub OAuth URL generated successfully');
+        console.log('🔗 Auth URL length:', githubAuthUrl.length, 'characters');
         
         res.json({ auth_url: githubAuthUrl });
     } catch (error) {
-        console.error('Error generating GitHub auth URL:', error);
+        console.error('❌ Error generating GitHub auth URL:', error);
         res.status(500).json({ error: 'Failed to generate GitHub auth URL' });
     }
 });
@@ -212,6 +219,7 @@ app.get('/auth/github/callback', async (req, res) => {
         }
 
         // Exchange code for access token
+        console.log('🔄 Exchanging GitHub authorization code for access token...');
         const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
@@ -225,24 +233,31 @@ app.get('/auth/github/callback', async (req, res) => {
         const { access_token } = tokenResponse.data;
 
         if (!access_token) {
+            console.log('❌ Failed to get GitHub access token');
             return res.redirect('/?error=Failed to get access token');
         }
+        console.log('✅ GitHub access token received successfully');
 
         // Get user info from GitHub
+        console.log('👤 Fetching GitHub user profile...');
         const userResponse = await axios.get('https://api.github.com/user', {
             headers: {
                 'Authorization': `token ${access_token}`,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
+        console.log('✅ GitHub user profile fetched successfully');
+        console.log('👤 GitHub username:', userResponse.data.login);
 
         // Get user email
+        console.log('📧 Fetching GitHub user emails...');
         const emailResponse = await axios.get('https://api.github.com/user/emails', {
             headers: {
                 'Authorization': `token ${access_token}`,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
+        console.log('✅ GitHub user emails fetched successfully');
 
         const primaryEmail = emailResponse.data.find(email => email.primary)?.email || userResponse.data.email;
 
@@ -316,8 +331,57 @@ app.get('/api/usage', (req, res) => {
             credentials: 'APIs & Services → Credentials → OAuth 2.0 Client IDs',
             api_dashboard: 'APIs & Services → Dashboard → Google+ API'
         },
+        github_monitoring: {
+            oauth_app_settings: 'GitHub.com → Settings → Developer settings → OAuth Apps',
+            rate_limits: 'Check /api/github-rate-limit endpoint',
+            api_documentation: 'https://docs.github.com/en/rest/rate-limit'
+        },
         timestamp: new Date().toISOString()
     });
+});
+
+// GitHub rate limit checking endpoint
+app.get('/api/github-rate-limit', async (req, res) => {
+    try {
+        console.log('📊 Checking GitHub API rate limits...');
+        
+        // Make a request to GitHub API to check rate limits
+        const response = await axios.get('https://api.github.com/rate_limit', {
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'Organize-Thinking-Tool'
+            }
+        });
+        
+        const rateLimit = response.data;
+        console.log('✅ GitHub rate limit info retrieved');
+        
+        res.json({
+            message: 'GitHub API Rate Limit Information',
+            rate_limits: {
+                core: {
+                    limit: rateLimit.resources.core.limit,
+                    remaining: rateLimit.resources.core.remaining,
+                    reset: new Date(rateLimit.resources.core.reset * 1000).toISOString(),
+                    used: rateLimit.resources.core.used
+                },
+                search: {
+                    limit: rateLimit.resources.search.limit,
+                    remaining: rateLimit.resources.search.remaining,
+                    reset: new Date(rateLimit.resources.search.reset * 1000).toISOString(),
+                    used: rateLimit.resources.search.used
+                }
+            },
+            note: 'OAuth token exchange has separate rate limits',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Error checking GitHub rate limits:', error.message);
+        res.status(500).json({
+            error: 'Failed to check GitHub rate limits',
+            message: error.message
+        });
+    }
 });
 
 // Simple user list (for development/admin purposes)
