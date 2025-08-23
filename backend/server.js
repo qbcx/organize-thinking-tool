@@ -49,16 +49,16 @@ const googleClient = new OAuth2Client(
 );
 
 // Serve static files (frontend)
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Routes
 app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: path.join(__dirname, 'frontend') });
+    res.sendFile('index.html', { root: path.join(__dirname, '..', 'frontend') });
 });
 
 app.get('/dashboard', (req, res) => {
     console.log('Dashboard route accessed');
-    res.sendFile('dashboard.html', { root: path.join(__dirname, 'frontend') });
+    res.sendFile('dashboard.html', { root: path.join(__dirname, '..', 'frontend') });
 });
 
 // Test route to verify server is working
@@ -261,7 +261,7 @@ app.get('/api/me', (req, res) => {
 app.get('*', (req, res) => {
     // Don't catch the root path - let it fall through to static files
     if (req.path === '/') {
-        return res.sendFile('index.html', { root: path.join(__dirname, 'frontend') });
+        return res.sendFile('index.html', { root: path.join(__dirname, '..', 'frontend') });
     }
     
     console.log(`404 - Route not found: ${req.path}`);
