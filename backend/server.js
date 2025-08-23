@@ -37,8 +37,11 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+    },
+    name: 'organize-thinking-session'
 }));
 
 // Google OAuth client (use environment variables only)
@@ -129,8 +132,18 @@ app.get('/auth/google/callback', async (req, res) => {
             provider: 'google'
         };
 
-        // Redirect to success
-        res.redirect('/?login=success');
+        console.log('Google OAuth - User stored in session:', req.session.user);
+        console.log('Session ID:', req.sessionID);
+
+        // Save session before redirect
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.redirect('/?error=Session save failed');
+            }
+            console.log('Session saved successfully');
+            res.redirect('/?login=success');
+        });
         
     } catch (error) {
         console.error('OAuth callback error:', error);
@@ -191,8 +204,18 @@ app.get('/auth/github/callback', async (req, res) => {
             provider: 'github'
         };
 
-        // Redirect to success
-        res.redirect('/?login=success');
+        console.log('GitHub OAuth - User stored in session:', req.session.user);
+        console.log('Session ID:', req.sessionID);
+
+        // Save session before redirect
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.redirect('/?error=Session save failed');
+            }
+            console.log('Session saved successfully');
+            res.redirect('/?login=success');
+        });
         
     } catch (error) {
         console.error('GitHub OAuth callback error:', error);
@@ -244,6 +267,10 @@ app.get('/api/users', (req, res) => {
 
 // Get current user info
 app.get('/api/me', (req, res) => {
+    console.log('API /me - Session ID:', req.sessionID);
+    console.log('API /me - Session user:', req.session.user);
+    console.log('API /me - All session data:', req.session);
+    
     if (req.session.user) {
         res.json({
             authenticated: true,
