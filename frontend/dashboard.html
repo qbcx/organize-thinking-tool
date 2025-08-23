@@ -273,11 +273,10 @@
                         document.getElementById('github-users').textContent = '1';
                     }
                 } else {
-                    userDiv.innerHTML = `
-                        <p>❌ No user currently logged in</p>
-                        <p>Please <a href="/" style="color: #667eea;">login first</a> to see user information.</p>
-                        <p><small>Response: ${JSON.stringify(data)}</small></p>
-                    `;
+                                         userDiv.innerHTML = `
+                         <p>❌ No user currently logged in</p>
+                         <p>Please <a href="/" style="color: #667eea;">login first</a> to see user information.</p>
+                     `;
                     document.getElementById('total-users').textContent = '0';
                     document.getElementById('google-users').textContent = '0';
                     document.getElementById('github-users').textContent = '0';

@@ -110,9 +110,11 @@ app.get('/favicon.ico', (req, res) => {
 // Google OAuth URL generation
 app.post('/api/auth/google', async (req, res) => {
     try {
-        console.log('🔐 Google OAuth URL requested');
-        console.log('📊 Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing');
-        console.log('🌍 Base URL:', BASE_URL);
+        // Safe logging - only log non-sensitive info
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔐 Google OAuth URL requested');
+            console.log('📊 Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing');
+        }
         
         const authUrl = googleClient.generateAuthUrl({
             access_type: 'offline',
@@ -123,12 +125,13 @@ app.post('/api/auth/google', async (req, res) => {
             prompt: 'consent'
         });
         
-        console.log('✅ Google OAuth URL generated successfully');
-        console.log('🔗 Auth URL length:', authUrl.length, 'characters');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Google OAuth URL generated successfully');
+        }
         
         res.json({ auth_url: authUrl });
     } catch (error) {
-        console.error('❌ Error generating auth URL:', error);
+        console.error('❌ Error generating auth URL:', error.message);
         res.status(500).json({ error: 'Failed to generate auth URL' });
     }
 });
@@ -136,18 +139,20 @@ app.post('/api/auth/google', async (req, res) => {
 // GitHub OAuth URL generation
 app.post('/api/auth/github', async (req, res) => {
     try {
-        console.log('🔐 GitHub OAuth URL requested');
-        console.log('📊 GitHub Client ID:', process.env.GITHUB_CLIENT_ID ? 'Set' : 'Missing');
-        console.log('🌍 Base URL:', BASE_URL);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔐 GitHub OAuth URL requested');
+            console.log('📊 GitHub Client ID:', process.env.GITHUB_CLIENT_ID ? 'Set' : 'Missing');
+        }
         
         const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.GITHUB_REDIRECT_URI || `${BASE_URL}/auth/github/callback`)}&scope=user:email`;
         
-        console.log('✅ GitHub OAuth URL generated successfully');
-        console.log('🔗 Auth URL length:', githubAuthUrl.length, 'characters');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ GitHub OAuth URL generated successfully');
+        }
         
         res.json({ auth_url: githubAuthUrl });
     } catch (error) {
-        console.error('❌ Error generating GitHub auth URL:', error);
+        console.error('❌ Error generating GitHub auth URL:', error.message);
         res.status(500).json({ error: 'Failed to generate GitHub auth URL' });
     }
 });
@@ -167,19 +172,29 @@ app.get('/auth/google/callback', async (req, res) => {
         }
 
         // Exchange code for tokens
-        console.log('🔄 Exchanging authorization code for tokens...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Exchanging authorization code for tokens...');
+        }
         const { tokens } = await googleClient.getToken(code);
         googleClient.setCredentials(tokens);
-        console.log('✅ Tokens received successfully');
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Tokens received successfully');
+        }
 
         // Get user info
-        console.log('👤 Fetching user profile from Google API...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('👤 Fetching user profile from Google API...');
+        }
         const userInfo = await googleClient.request({
             url: 'https://www.googleapis.com/oauth2/v2/userinfo'
         });
-        console.log('✅ User profile fetched successfully');
-        console.log('📧 User email:', userInfo.data.email);
-        console.log('👤 User name:', userInfo.data.name);
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ User profile fetched successfully');
+            console.log('📧 User email:', userInfo.data.email);
+            console.log('👤 User name:', userInfo.data.name);
+        }
 
         // Create JWT token with user info
         const userData = {
@@ -192,8 +207,10 @@ app.get('/auth/google/callback', async (req, res) => {
 
         const token = jwt.sign(userData, process.env.SESSION_SECRET || 'your-super-secret-session-key', { expiresIn: '24h' });
 
-        console.log('Google OAuth - User data:', userData);
-        console.log('JWT token created successfully');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ JWT token created successfully');
+            console.log('👤 User provider:', userData.provider);
+        }
 
         // Redirect with token in URL (for demo purposes - in production, use secure cookies)
         res.redirect(`/?login=success&token=${token}`);
@@ -219,7 +236,9 @@ app.get('/auth/github/callback', async (req, res) => {
         }
 
         // Exchange code for access token
-        console.log('🔄 Exchanging GitHub authorization code for access token...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Exchanging GitHub authorization code for access token...');
+        }
         const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
@@ -233,31 +252,46 @@ app.get('/auth/github/callback', async (req, res) => {
         const { access_token } = tokenResponse.data;
 
         if (!access_token) {
-            console.log('❌ Failed to get GitHub access token');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('❌ Failed to get GitHub access token');
+            }
             return res.redirect('/?error=Failed to get access token');
         }
-        console.log('✅ GitHub access token received successfully');
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ GitHub access token received successfully');
+        }
 
         // Get user info from GitHub
-        console.log('👤 Fetching GitHub user profile...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('👤 Fetching GitHub user profile...');
+        }
         const userResponse = await axios.get('https://api.github.com/user', {
             headers: {
                 'Authorization': `token ${access_token}`,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
-        console.log('✅ GitHub user profile fetched successfully');
-        console.log('👤 GitHub username:', userResponse.data.login);
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ GitHub user profile fetched successfully');
+            console.log('👤 GitHub username:', userResponse.data.login);
+        }
 
         // Get user email
-        console.log('📧 Fetching GitHub user emails...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📧 Fetching GitHub user emails...');
+        }
         const emailResponse = await axios.get('https://api.github.com/user/emails', {
             headers: {
                 'Authorization': `token ${access_token}`,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
-        console.log('✅ GitHub user emails fetched successfully');
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ GitHub user emails fetched successfully');
+        }
 
         const primaryEmail = emailResponse.data.find(email => email.primary)?.email || userResponse.data.email;
 
@@ -272,8 +306,10 @@ app.get('/auth/github/callback', async (req, res) => {
 
         const token = jwt.sign(userData, process.env.SESSION_SECRET || 'your-super-secret-session-key', { expiresIn: '24h' });
 
-        console.log('GitHub OAuth - User data:', userData);
-        console.log('JWT token created successfully');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ JWT token created successfully');
+            console.log('👤 User provider:', userData.provider);
+        }
 
         // Redirect with token in URL (for demo purposes - in production, use secure cookies)
         res.redirect(`/?login=success&token=${token}`);
@@ -397,7 +433,9 @@ app.get('/api/users', (req, res) => {
 
 // Get current user info
 app.get('/api/me', (req, res) => {
-    console.log('API /me - User from JWT:', req.user);
+    if (process.env.NODE_ENV === 'development') {
+        console.log('API /me - User authenticated:', !!req.user);
+    }
     
     if (req.user) {
         res.json({
