@@ -110,6 +110,10 @@ app.get('/favicon.ico', (req, res) => {
 // Google OAuth URL generation
 app.post('/api/auth/google', async (req, res) => {
     try {
+        console.log('🔐 Google OAuth URL requested');
+        console.log('📊 Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing');
+        console.log('🌍 Base URL:', BASE_URL);
+        
         const authUrl = googleClient.generateAuthUrl({
             access_type: 'offline',
             scope: [
@@ -119,9 +123,12 @@ app.post('/api/auth/google', async (req, res) => {
             prompt: 'consent'
         });
         
+        console.log('✅ Google OAuth URL generated successfully');
+        console.log('🔗 Auth URL length:', authUrl.length, 'characters');
+        
         res.json({ auth_url: authUrl });
     } catch (error) {
-        console.error('Error generating auth URL:', error);
+        console.error('❌ Error generating auth URL:', error);
         res.status(500).json({ error: 'Failed to generate auth URL' });
     }
 });
@@ -153,13 +160,19 @@ app.get('/auth/google/callback', async (req, res) => {
         }
 
         // Exchange code for tokens
+        console.log('🔄 Exchanging authorization code for tokens...');
         const { tokens } = await googleClient.getToken(code);
         googleClient.setCredentials(tokens);
+        console.log('✅ Tokens received successfully');
 
         // Get user info
+        console.log('👤 Fetching user profile from Google API...');
         const userInfo = await googleClient.request({
             url: 'https://www.googleapis.com/oauth2/v2/userinfo'
         });
+        console.log('✅ User profile fetched successfully');
+        console.log('📧 User email:', userInfo.data.email);
+        console.log('👤 User name:', userInfo.data.name);
 
         // Create JWT token with user info
         const userData = {
@@ -284,6 +297,26 @@ app.get('/api/health', (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+// Usage tracking endpoint
+app.get('/api/usage', (req, res) => {
+    res.json({
+        message: 'OAuth Usage Information',
+        note: 'Check Google Cloud Console for detailed metrics',
+        endpoints: {
+            google_oauth: '/api/auth/google',
+            google_callback: '/auth/google/callback',
+            github_oauth: '/api/auth/github',
+            github_callback: '/auth/github/callback'
+        },
+        google_cloud_console: {
+            oauth_consent_screen: 'APIs & Services → OAuth consent screen → Usage',
+            credentials: 'APIs & Services → Credentials → OAuth 2.0 Client IDs',
+            api_dashboard: 'APIs & Services → Dashboard → Google+ API'
+        },
+        timestamp: new Date().toISOString()
     });
 });
 
