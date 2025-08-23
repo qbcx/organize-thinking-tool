@@ -6,6 +6,9 @@ const axios = require('axios');
 const path = require('path');
 require('dotenv').config();
 
+// Create a simple in-memory store for sessions (for development/testing)
+const MemoryStore = session.MemoryStore;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -32,9 +35,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
+    store: new MemoryStore(),
     secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
@@ -67,6 +71,30 @@ app.get('/dashboard', (req, res) => {
 // Test route to verify server is working
 app.get('/test', (req, res) => {
     res.json({ message: 'Server is working!', route: '/test' });
+});
+
+// Test route to manually set a session (for debugging)
+app.get('/test-session', (req, res) => {
+    req.session.user = {
+        id: 'test-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        picture: 'https://via.placeholder.com/60',
+        provider: 'test'
+    };
+    
+    req.session.save((err) => {
+        if (err) {
+            console.error('Test session save error:', err);
+            return res.json({ error: 'Session save failed', details: err.message });
+        }
+        console.log('Test session saved successfully');
+        res.json({ 
+            message: 'Test session created', 
+            sessionId: req.sessionID,
+            user: req.session.user 
+        });
+    });
 });
 
 // Favicon route
@@ -107,10 +135,15 @@ app.post('/api/auth/github', async (req, res) => {
 
 // Google OAuth callback
 app.get('/auth/google/callback', async (req, res) => {
+    console.log('Google OAuth callback accessed');
+    console.log('Query parameters:', req.query);
+    console.log('Session ID before:', req.sessionID);
+    
     try {
         const { code } = req.query;
         
         if (!code) {
+            console.log('No authorization code received');
             return res.redirect('/?error=No authorization code received');
         }
 
@@ -153,10 +186,15 @@ app.get('/auth/google/callback', async (req, res) => {
 
 // GitHub OAuth callback
 app.get('/auth/github/callback', async (req, res) => {
+    console.log('GitHub OAuth callback accessed');
+    console.log('Query parameters:', req.query);
+    console.log('Session ID before:', req.sessionID);
+    
     try {
         const { code } = req.query;
         
         if (!code) {
+            console.log('No authorization code received');
             return res.redirect('/?error=No authorization code received');
         }
 
