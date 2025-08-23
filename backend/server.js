@@ -5,6 +5,7 @@ const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
@@ -30,6 +31,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Add cookie parser middleware
 
 // JWT middleware to extract user from token
 const authenticateToken = (req, res, next) => {
