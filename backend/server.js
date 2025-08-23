@@ -33,8 +33,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // JWT middleware to extract user from token
 const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    // Try to get token from cookie first (secure approach)
+    let token = req.cookies?.authToken;
+    
+    // Fallback to Authorization header (for backward compatibility)
+    if (!token) {
+        const authHeader = req.headers['authorization'];
+        token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    }
     
     if (!token) {
         return next();
@@ -42,7 +48,9 @@ const authenticateToken = (req, res, next) => {
     
     jwt.verify(token, process.env.SESSION_SECRET || 'your-super-secret-session-key', (err, user) => {
         if (err) {
-            console.log('JWT verification failed:', err.message);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('JWT verification failed:', err.message);
+            }
             return next();
         }
         req.user = user;
@@ -212,8 +220,17 @@ app.get('/auth/google/callback', async (req, res) => {
             console.log('👤 User provider:', userData.provider);
         }
 
-        // Redirect with token in URL (for demo purposes - in production, use secure cookies)
-        res.redirect(`/?login=success&token=${token}`);
+        // Set secure HTTP-only cookie with JWT token
+        res.cookie('authToken', token, {
+            httpOnly: true,           // Cannot be accessed by JavaScript
+            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+            sameSite: 'lax',          // CSRF protection
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            path: '/'                 // Available across the site
+        });
+        
+        // Redirect without token in URL
+        res.redirect('/?login=success');
         
     } catch (error) {
         console.error('OAuth callback error:', error);
@@ -311,8 +328,17 @@ app.get('/auth/github/callback', async (req, res) => {
             console.log('👤 User provider:', userData.provider);
         }
 
-        // Redirect with token in URL (for demo purposes - in production, use secure cookies)
-        res.redirect(`/?login=success&token=${token}`);
+        // Set secure HTTP-only cookie with JWT token
+        res.cookie('authToken', token, {
+            httpOnly: true,           // Cannot be accessed by JavaScript
+            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+            sameSite: 'lax',          // CSRF protection
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            path: '/'                 // Available across the site
+        });
+        
+        // Redirect without token in URL
+        res.redirect('/?login=success');
         
     } catch (error) {
         console.error('GitHub OAuth callback error:', error);
