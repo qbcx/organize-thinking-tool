@@ -4,10 +4,8 @@ const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
-
-// Create a simple in-memory store for sessions (for development/testing)
-const MemoryStore = session.MemoryStore;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,20 +31,27 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration
-app.use(session({
-    store: new MemoryStore(),
-    secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
-    resave: true,
-    saveUninitialized: true,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    },
-    name: 'organize-thinking-session'
-}));
+// JWT middleware to extract user from token
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    
+    if (!token) {
+        return next();
+    }
+    
+    jwt.verify(token, process.env.SESSION_SECRET || 'your-super-secret-session-key', (err, user) => {
+        if (err) {
+            console.log('JWT verification failed:', err.message);
+            return next();
+        }
+        req.user = user;
+        next();
+    });
+};
+
+// Apply JWT middleware
+app.use(authenticateToken);
 
 // Google OAuth client (use environment variables only)
 const googleClient = new OAuth2Client(
@@ -156,8 +161,8 @@ app.get('/auth/google/callback', async (req, res) => {
             url: 'https://www.googleapis.com/oauth2/v2/userinfo'
         });
 
-        // Store user info in session
-        req.session.user = {
+        // Create JWT token with user info
+        const userData = {
             id: userInfo.data.id,
             email: userInfo.data.email,
             name: userInfo.data.name,
@@ -165,18 +170,13 @@ app.get('/auth/google/callback', async (req, res) => {
             provider: 'google'
         };
 
-        console.log('Google OAuth - User stored in session:', req.session.user);
-        console.log('Session ID:', req.sessionID);
+        const token = jwt.sign(userData, process.env.SESSION_SECRET || 'your-super-secret-session-key', { expiresIn: '24h' });
 
-        // Save session before redirect
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session save error:', err);
-                return res.redirect('/?error=Session save failed');
-            }
-            console.log('Session saved successfully');
-            res.redirect('/?login=success');
-        });
+        console.log('Google OAuth - User data:', userData);
+        console.log('JWT token created successfully');
+
+        // Redirect with token in URL (for demo purposes - in production, use secure cookies)
+        res.redirect(`/?login=success&token=${token}`);
         
     } catch (error) {
         console.error('OAuth callback error:', error);
@@ -233,8 +233,8 @@ app.get('/auth/github/callback', async (req, res) => {
 
         const primaryEmail = emailResponse.data.find(email => email.primary)?.email || userResponse.data.email;
 
-        // Store user info in session
-        req.session.user = {
+        // Create JWT token with user info
+        const userData = {
             id: userResponse.data.id,
             email: primaryEmail,
             name: userResponse.data.name || userResponse.data.login,
@@ -242,18 +242,13 @@ app.get('/auth/github/callback', async (req, res) => {
             provider: 'github'
         };
 
-        console.log('GitHub OAuth - User stored in session:', req.session.user);
-        console.log('Session ID:', req.sessionID);
+        const token = jwt.sign(userData, process.env.SESSION_SECRET || 'your-super-secret-session-key', { expiresIn: '24h' });
 
-        // Save session before redirect
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session save error:', err);
-                return res.redirect('/?error=Session save failed');
-            }
-            console.log('Session saved successfully');
-            res.redirect('/?login=success');
-        });
+        console.log('GitHub OAuth - User data:', userData);
+        console.log('JWT token created successfully');
+
+        // Redirect with token in URL (for demo purposes - in production, use secure cookies)
+        res.redirect(`/?login=success&token=${token}`);
         
     } catch (error) {
         console.error('GitHub OAuth callback error:', error);
@@ -305,14 +300,12 @@ app.get('/api/users', (req, res) => {
 
 // Get current user info
 app.get('/api/me', (req, res) => {
-    console.log('API /me - Session ID:', req.sessionID);
-    console.log('API /me - Session user:', req.session.user);
-    console.log('API /me - All session data:', req.session);
+    console.log('API /me - User from JWT:', req.user);
     
-    if (req.session.user) {
+    if (req.user) {
         res.json({
             authenticated: true,
-            user: req.session.user
+            user: req.user
         });
     } else {
         res.status(401).json({

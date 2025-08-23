@@ -180,8 +180,27 @@
         async function checkCurrentUser() {
             try {
                 console.log('Fetching user data from /api/me...');
+                
+                // Get JWT token from localStorage
+                const token = localStorage.getItem('authToken');
+                
+                if (!token) {
+                    console.log('No JWT token found');
+                    const userDiv = document.getElementById('current-user');
+                    userDiv.innerHTML = `
+                        <p>❌ No user currently logged in</p>
+                        <p>Please <a href="/" style="color: #667eea;">login first</a> to see user information.</p>
+                    `;
+                    document.getElementById('total-users').textContent = '0';
+                    document.getElementById('google-users').textContent = '0';
+                    document.getElementById('github-users').textContent = '0';
+                    return;
+                }
+                
                 const response = await fetch('/api/me', {
-                    credentials: 'include' // Important for sessions
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
                 });
                 
                 console.log('Response status:', response.status);

@@ -170,23 +170,23 @@
             const urlParams = new URLSearchParams(window.location.search);
             const loginStatus = urlParams.get('login');
             const error = urlParams.get('error');
+            const token = urlParams.get('token');
             
-            if (loginStatus === 'success') {
-                // Get user info from session
-                fetch('/auth/status')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.authenticated && data.user) {
-                            const provider = data.user.provider || 'Google';
-                            const message = `You've successfully signed in with ${provider}. Ready to organize your thoughts and boost your productivity?`;
-                            document.getElementById('success-message').textContent = message;
-                        }
-                        showSuccessModal();
-                    })
-                    .catch(error => {
-                        console.error('Error getting user info:', error);
-                        showSuccessModal();
-                    });
+            if (loginStatus === 'success' && token) {
+                // Store the JWT token in localStorage
+                localStorage.setItem('authToken', token);
+                
+                // Get user info from token
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const provider = payload.provider || 'Google';
+                    const message = `You've successfully signed in with ${provider}. Ready to organize your thoughts and boost your productivity?`;
+                    document.getElementById('success-message').textContent = message;
+                } catch (e) {
+                    console.error('Error parsing token:', e);
+                }
+                
+                showSuccessModal();
             }
             
             if (error) {
